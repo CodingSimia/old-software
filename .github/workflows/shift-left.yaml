@@ -1,0 +1,61 @@
+---
+    name: Shift-Left Dry-Run
+    
+    on:
+      workflow_dispatch:
+        inputs:
+          platforms:
+            description: Platforms to build for.
+            type: string
+            default: linux/amd64, linux/arm64
+          version:
+            required: true
+            description: The version to set on the docker image
+            type: string
+          tagLatest:
+            required: false
+            default: false
+            description: Additionally tag the images as latest
+            type: boolean
+    
+    jobs:
+      Build:
+        runs-on: ubuntu-24.04
+        timeout-minutes: 20
+    
+        steps:
+          - name: Checkout code
+            uses: actions/checkout@v4
+    
+          - name: Set up QEMU for Docker
+            id: qemu
+            uses: docker/setup-qemu-action@v2
+    
+          - name: Set up Docker buildx
+            id: buildx
+            uses: docker/setup-buildx-action@v2
+    
+          - name: Build Server Image
+            id: build_server
+            uses: docker/build-push-action@v5
+            with:
+              builder: ${{ steps.buildx.outputs.name }}
+              build-args: |
+                GOPRIVATE=github.com/upwindsecurity
+                GITHUB_OWNER=${{ secrets.UPWINDSECURITY_BOT_GITHUB_OWNER }}
+                GITHUB_TOKEN=${{ secrets.UPWINDSECURITY_BOT_GITHUB_TOKEN }}
+              context: .
+              target: ''
+              labels: ${{ inputs.version }}
+              platforms: ${{ inputs.platforms }}
+              push: false
+              tags: 'cloudscanner-server:${{ inputs.version }}'
+    
+          - name: Execute Upwind CI scan plugin
+            uses: upwindsecurity/githubactions-scanner@v0.1.0
+            with:
+              upwind_client_id: ${{ secrets.INTEGRATION_UPWIND_CI_EVENT_DEV_CLIENT_ID }} 
+              upwind_client_secret: ${{ secrets.INTEGRATION_UPWIND_CI_EVENT_DEV_CLIENT_SECRET }}
+              extra_scan_args: "--log-level=debug --dry-run=true"
+              public_uri_domain: "upwind.dev"
+              docker_image: 'cloudscanner-server:${{ inputs.version }}'    

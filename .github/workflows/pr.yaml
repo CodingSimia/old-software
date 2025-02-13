@@ -1,0 +1,44 @@
+---
+name: Run on PR Creation
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  Build:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          submodules: 'true'
+
+      - name: Install Dependencies
+        run: |
+          sudo apt update && sudo apt install -y golang ca-certificates curl jq
+          go install github.com/gohugoio/hugo@latest
+
+      - name: Build pages
+        run: |
+           cd docs
+           ~/go/bin/hugo
+
+      - name: Build Docker Image
+        run: |
+           sudo docker build . --tag test:${GITHUB_SHA} 
+
+      - name: List images
+        run: sudo docker images
+        
+      - name: Execute Upwind CI scan plugin
+        uses: upwindsecurity/shiftleft-create-image-scan-event-action@main
+        with:
+          upwind_client_id: ${{ secrets.INTEGRATION_UPWIND_CI_EVENT_PROD_CLIENT_ID }}
+          upwind_client_secret: ${{ secrets.INTEGRATION_UPWIND_CI_EVENT_PROD_CLIENT_SECRET }}
+          docker_image: test:${GITHUB_SHA}
+          pull_image: false
