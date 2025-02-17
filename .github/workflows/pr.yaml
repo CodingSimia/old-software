@@ -30,7 +30,7 @@ jobs:
 
       - name: Build Docker Image
         run: |
-           sudo docker build . --tag old-soft:${GITHUB_SHA} 
+           sudo docker build . --tag 211817858971.dkr.ecr.us-east-1.amazonaws.com/david-ecs-vuln-testing:latest
 
       - name: List images
         run: sudo docker images
@@ -40,5 +40,5 @@ jobs:
         with:
           upwind_client_id: ${{ secrets.INTEGRATION_UPWIND_CI_EVENT_PROD_CLIENT_ID }}
           upwind_client_secret: ${{ secrets.INTEGRATION_UPWIND_CI_EVENT_PROD_CLIENT_SECRET }}
-          docker_image: old-soft:${GITHUB_SHA}
+          docker_image: 211817858971.dkr.ecr.us-east-1.amazonaws.com/david-ecs-vuln-testing:latest
           pull_image: false
